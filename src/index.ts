@@ -23,7 +23,7 @@ const client = new Client({
 const textToSpeechClient = new textToSpeech.TextToSpeechClient({
   projectId: process.env.GOOGLE_PROJECT_ID,
   credentials: {
-    private_key: process.env.GOOGLE_PRIVATE_KEY,
+    private_key: process.env.GOOGLE_PRIVATE_KEY.split(String.raw`\n`).join('\n'),
     client_email: process.env.GOOGLE_CLIENT_EMAIL,
   },
 });

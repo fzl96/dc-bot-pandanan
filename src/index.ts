@@ -6,6 +6,7 @@ import {
   ApplicationCommandOptionType,
 } from "discord.js";
 import { Configuration, OpenAIApi } from "openai";
+import type { ChatCompletionRequestMessage } from "openai";
 import dotenv from "dotenv";
 import fs from "fs";
 
@@ -67,20 +68,6 @@ client.on("interactionCreate", async (interaction) => {
 
   if (commandName === "ping") {
     const user = await interaction.user;
-    const userId = user.id;
-    
-    fs.readFile("history.json", "utf8", function (err, data) {
-      if (err) throw err;
-      const commandHistory = JSON.parse(data);
-      const userIndex = commandHistory.history.findIndex(item => item.userId === userId);
-
-      if (userIndex !== -1) {
-        
-      } else {
-        commandHistory.history.push({userId: userId, commands: [commandName]});
-      }
-    });
-
     await interaction.reply("Pong!");
 
   } else if (commandName === "chatgpt") {
@@ -97,25 +84,33 @@ client.on("interactionCreate", async (interaction) => {
       const userData = commandHistory[userIndex];
 
       if (userIndex !== -1) {
+        const newMessage = {role: "user", content: question as string};
+        const messages = [...userData.commands, newMessage];
+
         const completion = await openai.createChatCompletion({
           model: "gpt-3.5-turbo",
-          messages: [...userData.commands, {role: "user", content: question as string}]
+          messages: [...messages]
         });
     
         await interaction.followUp({
           content: `${question} by ${user} : \n\n${completion.data.choices[0].message.content}`,
         });
 
-        commandHistory[userIndex].commands.push({
-          role: "user",
-          content: question as string
-        });
+        // commandHistory[userIndex].commands.push(newMessage, );
+        // push new message and completion message to user's commands 
+        commandHistory[userIndex].commands = [...messages, {
+          role: "assistant",
+          content: completion.data.choices[0].message.content
+        }];
       } else {
+        const messages: ChatCompletionRequestMessage[] = [
+          {role: "system", content: "You are a very helpful assistant."},
+          {role: "user", content: question as string},
+        ]
+
         const completion = await openai.createChatCompletion({
           model: "gpt-3.5-turbo",
-          messages: [
-            {role: "user", content: question as string},
-        ]
+          messages: [...messages]
         });
     
         await interaction.followUp({
@@ -123,9 +118,10 @@ client.on("interactionCreate", async (interaction) => {
         });
 
         commandHistory.push({userId: userId, commands: [
+          ...messages,
           {
-            role: "user",
-            content: question as string
+            role: "assistant",
+            content: completion.data.choices[0].message.content
           }
         ]});
       }

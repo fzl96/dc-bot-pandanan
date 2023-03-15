@@ -7,6 +7,7 @@ import {
 } from "discord.js";
 import { Configuration, OpenAIApi } from "openai";
 import dotenv from "dotenv";
+import fs from "fs";
 
 dotenv.config();
 
@@ -65,21 +66,74 @@ client.on("interactionCreate", async (interaction) => {
   const { commandName } = interaction;
 
   if (commandName === "ping") {
+    const user = await interaction.user;
+    const userId = user.id;
+    
+    fs.readFile("history.json", "utf8", function (err, data) {
+      if (err) throw err;
+      const commandHistory = JSON.parse(data);
+      const userIndex = commandHistory.history.findIndex(item => item.userId === userId);
+
+      if (userIndex !== -1) {
+        
+      } else {
+        commandHistory.history.push({userId: userId, commands: [commandName]});
+      }
+    });
+
     await interaction.reply("Pong!");
+
   } else if (commandName === "chatgpt") {
     // get the option
     const question = await interaction.options.get("prompt")?.value;
     const user = await interaction.user;
+    const userId = user.id;
     await interaction.deferReply();
+    
+    fs.readFile("history.json", "utf8", async function (err, data) {
+      if (err) throw err;
+      const commandHistory = JSON.parse(data);
+      const userIndex = commandHistory.findIndex(item => item.userId === userId);
+      const userData = commandHistory[userIndex];
 
-    const completion = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {"role": "user", "content": question as string},
-    ]
-    });
-    await interaction.followUp({
-      content: `${question} by ${user} : ${completion.data.choices[0].message.content}`,
+      if (userIndex !== -1) {
+        const completion = await openai.createChatCompletion({
+          model: "gpt-3.5-turbo",
+          messages: [...userData.commands, {role: "user", content: question as string}]
+        });
+    
+        await interaction.followUp({
+          content: `${question} by ${user} : \n\n${completion.data.choices[0].message.content}`,
+        });
+
+        commandHistory[userIndex].commands.push({
+          role: "user",
+          content: question as string
+        });
+      } else {
+        const completion = await openai.createChatCompletion({
+          model: "gpt-3.5-turbo",
+          messages: [
+            {role: "user", content: question as string},
+        ]
+        });
+    
+        await interaction.followUp({
+          content: `${question} by ${user} : \n\n${completion.data.choices[0].message.content}`,
+        });
+
+        commandHistory.push({userId: userId, commands: [
+          {
+            role: "user",
+            content: question as string
+          }
+        ]});
+      }
+
+      fs.writeFile('history.json', JSON.stringify(commandHistory), (err) => {
+        if (err) throw err;
+        console.log('Command history saved to JSON file');
+      });
     });
   }
 });

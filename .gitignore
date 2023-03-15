@@ -2,3 +2,4 @@
 dist
 node_modules
 .env
+text-to-speech-key.json

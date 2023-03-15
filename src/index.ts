@@ -9,6 +9,8 @@ import { Configuration, OpenAIApi } from "openai";
 import type { ChatCompletionRequestMessage } from "openai";
 import dotenv from "dotenv";
 import fs from "fs";
+import textToSpeech from "@google-cloud/text-to-speech";
+import util from "util";
 
 dotenv.config();
 
@@ -17,6 +19,13 @@ const CLIENT_ID = process.env.CLIENT_ID;
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+});
+const textToSpeechClient = new textToSpeech.TextToSpeechClient({
+  projectId: process.env.GOOGLE_PROJECT_ID,
+  credentials: {
+    private_key: process.env.GOOGLE_PRIVATE_KEY,
+    client_email: process.env.GOOGLE_CLIENT_EMAIL,
+  },
 });
 
 const configuration = new Configuration({
@@ -91,8 +100,20 @@ client.on("interactionCreate", async (interaction) => {
           model: "gpt-3.5-turbo",
           messages: [...messages]
         });
-    
+
+        const request: any = {
+          input: {text: completion.data.choices[0].message.content},
+          audioConfig: {audioEncoding: "MP3"},
+        };
+
+        const outputName = `output-${userId}.mp3`;
+        const [response] = await textToSpeechClient.synthesizeSpeech(request);
+        const writeFile = util.promisify(fs.writeFile);
+        await writeFile(outputName, response.audioContent, 'binary');
+
+        // send the audio file
         await interaction.followUp({
+          files: [outputName],
           content: `${question} by ${user} : \n\n${completion.data.choices[0].message.content}`,
         });
 
@@ -102,6 +123,11 @@ client.on("interactionCreate", async (interaction) => {
           role: "assistant",
           content: completion.data.choices[0].message.content
         }];
+
+        fs.unlink(outputName, (err) => {
+          if (err) throw err;
+          console.log('Audio file deleted');
+        });
       } else {
         const messages: ChatCompletionRequestMessage[] = [
           {
@@ -115,11 +141,23 @@ client.on("interactionCreate", async (interaction) => {
           model: "gpt-3.5-turbo",
           messages: [...messages]
         });
-    
+
+        const request: any = {
+          input: {text: completion.data.choices[0].message.content},
+          audioConfig: {audioEncoding: "MP3"},
+        };
+
+        const outputName = `output-${userId}.mp3`;
+        const [response] = await textToSpeechClient.synthesizeSpeech(request);
+        const writeFile = util.promisify(fs.writeFile);
+        await writeFile(outputName, response.audioContent, 'binary');
+
+        // send the audio file
         await interaction.followUp({
+          files: [outputName],
           content: `${question} by ${user} : \n\n${completion.data.choices[0].message.content}`,
         });
-
+  
         commandHistory.push({userId: userId, commands: [
           ...messages,
           {
@@ -127,6 +165,11 @@ client.on("interactionCreate", async (interaction) => {
             content: completion.data.choices[0].message.content
           }
         ]});
+
+        fs.unlink(outputName, (err) => {
+          if (err) throw err;
+          console.log('Audio file deleted');
+        });
       }
 
       fs.writeFile('history.json', JSON.stringify(commandHistory), (err) => {

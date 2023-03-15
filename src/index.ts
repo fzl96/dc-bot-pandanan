@@ -12,8 +12,12 @@ dotenv.config();
 
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
+
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+});
+
 const configuration = new Configuration({
-  organization: "org-VPRwtAION8EMQVaEsIUXvZno",
   apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
@@ -37,7 +41,7 @@ const commands = [
   },
 ];
 
-const rest = new REST({ version: "9" }).setToken(TOKEN);
+const rest = new REST({ version: "10" }).setToken(TOKEN);
 
 (async () => {
   try {
@@ -51,16 +55,12 @@ const rest = new REST({ version: "9" }).setToken(TOKEN);
   }
 })();
 
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
-});
-
 client.on("ready", () => {
   console.log(`Logged in as ${client.user ? client.user.tag : ""}!`);
-});
+}); 
 
 client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isCommand()) return;
+  if (!interaction.isChatInputCommand()) return;
 
   const { commandName } = interaction;
 

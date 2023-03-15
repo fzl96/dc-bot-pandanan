@@ -104,7 +104,10 @@ client.on("interactionCreate", async (interaction) => {
         }];
       } else {
         const messages: ChatCompletionRequestMessage[] = [
-          {role: "system", content: "You are a very helpful assistant."},
+          {
+            role: "system", 
+            content: "You are ChatGPT, a large language model trained by OpenAI. Follow the user's instructions carefully!"
+          },
           {role: "user", content: question as string},
         ]
 

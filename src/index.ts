@@ -11,6 +11,7 @@ import dotenv from "dotenv";
 import fs from "fs";
 import textToSpeech from "@google-cloud/text-to-speech";
 import util from "util";
+import { v4 as uuidv4 } from "uuid";
 
 dotenv.config();
 
@@ -108,8 +109,9 @@ client.on("interactionCreate", async (interaction) => {
             voice: {languageCode: "en-US", ssmlGender: "FEMALE", name: "en-US-Neural2-C"},
             audioConfig: {audioEncoding: "MP3"},
           };
-  
-          const outputName = `output-${userId}.mp3`;
+          
+          const id = uuidv4();
+          const outputName = `output-${id}.mp3`;
           const [response] = await textToSpeechClient.synthesizeSpeech(request);
           const writeFile = util.promisify(fs.writeFile);
           await writeFile(outputName, response.audioContent, 'binary');
@@ -150,8 +152,9 @@ client.on("interactionCreate", async (interaction) => {
             voice: {languageCode: "en-US", ssmlGender: "FEMALE", name: "en-US-Neural2-C"},
             audioConfig: {audioEncoding: "MP3"},
           };
-  
-          const outputName = `output-${userId}.mp3`;
+          
+          const id = uuidv4();
+          const outputName = `output-${id}.mp3`;
           const [response] = await textToSpeechClient.synthesizeSpeech(request);
           const writeFile = util.promisify(fs.writeFile);
           await writeFile(outputName, response.audioContent, 'binary');

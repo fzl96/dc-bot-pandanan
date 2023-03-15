@@ -85,98 +85,106 @@ client.on("interactionCreate", async (interaction) => {
     const user = await interaction.user;
     const userId = user.id;
     await interaction.deferReply();
-    
-    fs.readFile("history.json", "utf8", async function (err, data) {
-      if (err) throw err;
-      const commandHistory = JSON.parse(data);
-      const userIndex = commandHistory.findIndex(item => item.userId === userId);
-      const userData = commandHistory[userIndex];
 
-      if (userIndex !== -1) {
-        const newMessage = {role: "user", content: question as string};
-        const messages = [...userData.commands, newMessage];
+    try {
 
-        const completion = await openai.createChatCompletion({
-          model: "gpt-3.5-turbo",
-          messages: [...messages]
-        });
-
-        const request: any = {
-          input: {text: completion.data.choices[0].message.content},
-          audioConfig: {audioEncoding: "MP3"},
-        };
-
-        const outputName = `output-${userId}.mp3`;
-        const [response] = await textToSpeechClient.synthesizeSpeech(request);
-        const writeFile = util.promisify(fs.writeFile);
-        await writeFile(outputName, response.audioContent, 'binary');
-
-        // send the audio file
-        await interaction.followUp({
-          files: [outputName],
-          content: `${question} by ${user} : \n\n${completion.data.choices[0].message.content}`,
-        });
-
-        // commandHistory[userIndex].commands.push(newMessage, );
-        // push new message and completion message to user's commands 
-        commandHistory[userIndex].commands = [...messages, {
-          role: "assistant",
-          content: completion.data.choices[0].message.content
-        }];
-
-        fs.unlink(outputName, (err) => {
-          if (err) throw err;
-          console.log('Audio file deleted');
-        });
-      } else {
-        const messages: ChatCompletionRequestMessage[] = [
-          {
-            role: "system", 
-            content: "You are ChatGPT, a large language model trained by OpenAI. Follow the user's instructions carefully!"
-          },
-          {role: "user", content: question as string},
-        ]
-
-        const completion = await openai.createChatCompletion({
-          model: "gpt-3.5-turbo",
-          messages: [...messages]
-        });
-
-        const request: any = {
-          input: {text: completion.data.choices[0].message.content},
-          audioConfig: {audioEncoding: "MP3"},
-        };
-
-        const outputName = `output-${userId}.mp3`;
-        const [response] = await textToSpeechClient.synthesizeSpeech(request);
-        const writeFile = util.promisify(fs.writeFile);
-        await writeFile(outputName, response.audioContent, 'binary');
-
-        // send the audio file
-        await interaction.followUp({
-          files: [outputName],
-          content: `${question} by ${user} : \n\n${completion.data.choices[0].message.content}`,
-        });
+      fs.readFile("history.json", "utf8", async function (err, data) {
+        if (err) throw err;
+        const commandHistory = JSON.parse(data);
+        const userIndex = commandHistory.findIndex(item => item.userId === userId);
+        const userData = commandHistory[userIndex];
   
-        commandHistory.push({userId: userId, commands: [
-          ...messages,
-          {
+        if (userIndex !== -1) {
+          const newMessage = {role: "user", content: question as string};
+          const messages = [...userData.commands, newMessage];
+  
+          const completion = await openai.createChatCompletion({
+            model: "gpt-3.5-turbo",
+            messages: [...messages]
+          });
+  
+          const request: any = {
+            input: {text: completion.data.choices[0].message.content},
+            voice: {languageCode: "en-US", ssmlGender: "FEMALE", name: "en-US-Neural2-C"},
+            audioConfig: {audioEncoding: "MP3"},
+          };
+  
+          const outputName = `output-${userId}.mp3`;
+          const [response] = await textToSpeechClient.synthesizeSpeech(request);
+          const writeFile = util.promisify(fs.writeFile);
+          await writeFile(outputName, response.audioContent, 'binary');
+  
+          // send the audio file
+          await interaction.followUp({
+            files: [outputName],
+            content: `${question} by ${user} : \n\n${completion.data.choices[0].message.content}`,
+          });
+  
+          // commandHistory[userIndex].commands.push(newMessage, );
+          // push new message and completion message to user's commands 
+          commandHistory[userIndex].commands = [...messages, {
             role: "assistant",
             content: completion.data.choices[0].message.content
-          }
-        ]});
-
-        fs.unlink(outputName, (err) => {
+          }];
+  
+          fs.unlink(outputName, (err) => {
+            if (err) throw err;
+            console.log('Audio file deleted');
+          });
+        } else {
+          const messages: ChatCompletionRequestMessage[] = [
+            {
+              role: "system", 
+              content: "You are ChatGPT, a large language model trained by OpenAI. Follow the user's instructions carefully!"
+            },
+            {role: "user", content: question as string},
+          ]
+  
+          const completion = await openai.createChatCompletion({
+            model: "gpt-3.5-turbo",
+            messages: [...messages]
+          });
+  
+          const request: any = {
+            input: {text: completion.data.choices[0].message.content},
+            voice: {languageCode: "en-US", ssmlGender: "FEMALE", name: "en-US-Neural2-C"},
+            audioConfig: {audioEncoding: "MP3"},
+          };
+  
+          const outputName = `output-${userId}.mp3`;
+          const [response] = await textToSpeechClient.synthesizeSpeech(request);
+          const writeFile = util.promisify(fs.writeFile);
+          await writeFile(outputName, response.audioContent, 'binary');
+  
+          // send the audio file
+          await interaction.followUp({
+            files: [outputName],
+            content: `${question} by ${user} : \n\n${completion.data.choices[0].message.content}`,
+          });
+    
+          commandHistory.push({userId: userId, commands: [
+            ...messages,
+            {
+              role: "assistant",
+              content: completion.data.choices[0].message.content
+            }
+          ]});
+  
+          fs.unlink(outputName, (err) => {
+            if (err) throw err;
+            console.log('Audio file deleted');
+          });
+        }
+  
+        fs.writeFile('history.json', JSON.stringify(commandHistory), (err) => {
           if (err) throw err;
-          console.log('Audio file deleted');
+          console.log('Command history saved to JSON file');
         });
-      }
-
-      fs.writeFile('history.json', JSON.stringify(commandHistory), (err) => {
-        if (err) throw err;
-        console.log('Command history saved to JSON file');
       });
-    });
+    } catch (error) {
+      console.error(error);
+      await interaction.followUp({ content: "There was an error while executing this command!", ephemeral: true });
+    }
   }
 });
 

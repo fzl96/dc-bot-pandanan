@@ -85,7 +85,7 @@ client.on("messageCreate", async (message) => {
 
   await message.channel.sendTyping();
 
-  let prevMessages = await message.channel.messages.fetch({ limit: 15 });
+  let prevMessages = await message.channel.messages.fetch({ limit: 20 });
 
   prevMessages.reverse().forEach((msg) => {
     if (msg.content.startsWith("!")) return;

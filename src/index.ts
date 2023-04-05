@@ -1,7 +1,7 @@
 import {
   REST,
   Routes,
-  GatewayIntentBits,
+  IntentsBitField,
   Client,
   ApplicationCommandOptionType,
 } from "discord.js";
@@ -15,12 +15,14 @@ import { v4 as uuidv4 } from "uuid";
 
 dotenv.config();
 
-const TOKEN = process.env.DISCORD_BOT_TOKEN;
+const TOKEN = process.env.DISCORD_BOT_TOKEN; 
 const CLIENT_ID = process.env.CLIENT_ID;
+const CHANNEL_ID = process.env.CHANNEL_ID;
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+  intents: [IntentsBitField.Flags.Guilds, IntentsBitField.Flags.GuildMessages, IntentsBitField.Flags.MessageContent],
 });
+
 const textToSpeechClient = new textToSpeech.TextToSpeechClient({
   projectId: process.env.GOOGLE_PROJECT_ID,
   credentials: {
@@ -70,6 +72,39 @@ const rest = new REST({ version: "10" }).setToken(TOKEN);
 client.on("ready", () => {
   console.log(`Logged in as ${client.user ? client.user.tag : ""}!`);
 }); 
+
+client.on("messageCreate", async (message) => {
+  if (message.author.bot) return;
+  if (message.channel.id !== CHANNEL_ID) return;
+  if (message.content.startsWith("!")) return;
+
+  let conversationLog: any = [{
+    role: "system", 
+    content: "You are ChatGPT, a large language model trained by OpenAI. Follow the user's instructions carefully!"
+  }];
+
+  await message.channel.sendTyping();
+
+  let prevMessages = await message.channel.messages.fetch({ limit: 15 });
+
+  prevMessages.reverse().forEach((msg) => {
+    if (msg.content.startsWith("!")) return;
+    if (msg.author.id !== client.user.id && message.author.bot) return;
+    if (msg.author.id !== message.author.id) return;
+
+    conversationLog.push({
+      role: "user",
+      content: msg.content,
+    });
+  });
+
+  const completion = await openai.createChatCompletion({
+    model: "gpt-3.5-turbo",
+    messages: conversationLog,
+  });
+
+  message.reply(completion.data.choices[0].message.content);
+});
 
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;

@@ -12,6 +12,7 @@ import fs from "fs";
 import textToSpeech from "@google-cloud/text-to-speech";
 import util from "util";
 import { v4 as uuidv4 } from "uuid";
+import { curseWords } from './data.js';
 
 dotenv.config();
 
@@ -75,6 +76,13 @@ client.on("ready", () => {
 
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
+  // check if the content contains a curse word
+  const messageContent = message.content.toLowerCase();
+  const isCurseWord = curseWords.some(word => messageContent.includes(word));
+  if (isCurseWord) {
+    await message.reply("Sopan dikit dek!");
+    return;
+  }
   if (message.channel.id !== CHANNEL_ID) return;
   if (message.content.startsWith("!")) return;
 

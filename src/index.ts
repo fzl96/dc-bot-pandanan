@@ -86,12 +86,12 @@ client.on("messageCreate", async (message) => {
   if (message.channel.id !== CHANNEL_ID) return;
   if (message.content.startsWith("!")) return;
 
+  await message.channel.sendTyping();
+
   let conversationLog: any = [{
     role: "system", 
     content: "You are ChatGPT, a large language model trained by OpenAI. Follow the user's instructions carefully!"
   }];
-
-  await message.channel.sendTyping();
 
   let prevMessages = await message.channel.messages.fetch({ limit: 20 });
 
@@ -106,6 +106,8 @@ client.on("messageCreate", async (message) => {
     });
   });
 
+  await message.channel.sendTyping();
+
   const completion = await openai.createChatCompletion({
     model: "gpt-3.5-turbo",
     messages: conversationLog,
@@ -116,13 +118,18 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
+  await message.channel.sendTyping();
+
   if (completion.data.choices[0].message.content.length > 2000) {;
     // split the message and send it in multiple messages
     const messageArray = completion.data.choices[0].message.content.match(/[\s\S]{1,2000}/g); 
     console.log(messageArray);
-    messageArray?.forEach(async (msg) => {
-      console.log("got printed");
-      await message.reply(msg);
+    messageArray?.forEach(async (msg, i) => {
+      if (i === 0) {
+        await message.reply(msg);
+        return;
+      }
+      await message.channel.send(msg);
     });
     return;
   }

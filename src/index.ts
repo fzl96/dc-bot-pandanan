@@ -116,10 +116,12 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  if (completion.data.choices[0].message.content.length > 2000) {
+  if (completion.data.choices[0].message.content.length > 2000) {;
     // split the message and send it in multiple messages
     const messageArray = completion.data.choices[0].message.content.match(/[\s\S]{1,2000}/g); 
+    console.log(messageArray);
     messageArray?.forEach(async (msg) => {
+      console.log("got printed");
       await message.reply(msg);
     });
     return;

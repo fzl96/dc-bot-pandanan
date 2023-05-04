@@ -113,7 +113,6 @@ client.on("messageCreate", async (message) => {
 
   message.reply(completion.data.choices[0].message.content);
 });
-
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 

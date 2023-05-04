@@ -111,6 +111,20 @@ client.on("messageCreate", async (message) => {
     messages: conversationLog,
   });
 
+  if (!completion.data.choices[0].message.content) {
+    await message.reply("I don't know what to say!");
+    return;
+  }
+
+  if (completion.data.choices[0].message.content.length > 2000) {
+    // split the message and send it in multiple messages
+    const messageArray = completion.data.choices[0].message.content.match(/[\s\S]{1,2000}/g); 
+    messageArray?.forEach(async (msg) => {
+      await message.reply(msg);
+    });
+    return;
+  }
+
   message.reply(completion.data.choices[0].message.content);
 });
 client.on("interactionCreate", async (interaction) => {
